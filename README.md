@@ -1,2 +1,2 @@
 # MS-2.O
-project
+ https://therushilshetty.github.io/MS-2-/
