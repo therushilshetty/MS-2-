@@ -117,6 +117,7 @@ function solve() {
     if(isImpossible) {
         banner.className = "case-banner cb-rose";
         banner.innerHTML = `<strong>Not Possible:</strong> ${currentData.reason}`;
+        banner.style.display = 'block';
     } else {
         banner.style.display = 'none';
         document.getElementById('r_W').textContent = W.toFixed(1) + ' N';
@@ -124,7 +125,6 @@ function solve() {
         document.getElementById('r_Nf').textContent = currentData.Nf.toFixed(1) + ' N';
         document.getElementById('r_Nr').textContent = currentData.Nr.toFixed(1) + ' N';
     }
-
     animate();
 }
 
@@ -155,70 +155,69 @@ function draw(t) {
     ctx.roundRect(Ax-60, groundY-110, (Bx-Ax)+120, 60, 15);
     ctx.fill();
 
-    // Side Dotted Lines & Dimensions
-    const t1 = groundY + 40;
-    const t2 = groundY + 85;
+    // Dimensions
+    const t1 = groundY + 45;
+    const t2 = groundY + 95;
 
     ctx.setLineDash([5, 5]); ctx.lineWidth = 1; ctx.strokeStyle = "#a78bfa";
-    // Axle A Side Dotted
     ctx.beginPath(); ctx.moveTo(Ax, groundY); ctx.lineTo(Ax, t1 + 10); ctx.stroke();
-    // Center G Side Dotted
     ctx.beginPath(); ctx.moveTo(Gx, groundY); ctx.lineTo(Gx, t1 + 10); ctx.stroke();
-    // Axle B Side Dotted
     ctx.beginPath(); ctx.moveTo(Bx, groundY); ctx.lineTo(Bx, t1 + 10); ctx.stroke();
-
     ctx.setLineDash([]);
-    // df line
     ctx.beginPath(); ctx.moveTo(Ax, t1); ctx.lineTo(Gx, t1); ctx.stroke();
-    // dr line
     ctx.beginPath(); ctx.moveTo(Gx, t1); ctx.lineTo(Bx, t1); ctx.stroke();
 
     ctx.fillStyle = "#a78bfa"; ctx.font = "bold 11px Space Mono"; ctx.textAlign="center";
     ctx.fillText(`df: ${p.df_m.toFixed(3)}m`, (Ax+Gx)/2, t1 - 8);
     ctx.fillText(`dr: ${p.dr_m.toFixed(3)}m`, (Gx+Bx)/2, t1 - 8);
 
-    // Total Wheelbase Side Lines
-    ctx.setLineDash([5, 5]); ctx.strokeStyle = "#38bdf8";
-    ctx.beginPath(); ctx.moveTo(Ax, t1+10); ctx.lineTo(Ax, t2+10); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(Bx, t1+10); ctx.lineTo(Bx, t2+10); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.beginPath(); ctx.moveTo(Ax, t2); ctx.lineTo(Bx, t2); ctx.stroke();
-    ctx.fillStyle = "#38bdf8";
-    ctx.fillText(`Wheelbase L: ${p.L.toFixed(3)}m`, 470, t2 - 8);
-
-    // Forces with GLOW at Tips
+    // Forces with GLOW TIPS and CIRCLE NODES
     const fLen = 100 * t;
-    drawGlowArrow(Gx, groundY-80, Gx, groundY-80 + fLen, "#fb7185", "W", "down");
-    drawGlowArrow(Ax, groundY, Ax, groundY - fLen, "#34d399", "Nf", "up");
-    drawGlowArrow(Bx, groundY, Bx, groundY - fLen, "#fbbf24", "Nr", "Nr", "up");
+    drawForce(Gx, groundY-80, fLen, "down", "#fb7185", "W", p.W.toFixed(1)+'N');
+    drawForce(Ax, groundY, fLen, "up", "#34d399", "Nf", p.Nf.toFixed(1)+'N');
+    drawForce(Bx, groundY, fLen, "up", "#fbbf24", "Nr", p.Nr.toFixed(1)+'N');
 }
 
-function drawGlowArrow(x1, y1, x2, y2, color, label, dir) {
-    // Arrow Shaft
-    ctx.strokeStyle = color; ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-
-    // GLOW TIP EFFECT
+function drawForce(x, y, len, dir, color, label, val) {
+    const targetY = y + (dir === "up" ? -len : len);
+    
+    // 1. Draw the Glowing Circle Node at the source
     ctx.save();
     ctx.shadowBlur = 15;
     ctx.shadowColor = color;
+    const grad = ctx.createRadialGradient(x, y, 0, x, y, 6);
+    grad.addColorStop(0, "white");
+    grad.addColorStop(0.4, color);
+    grad.addColorStop(1, "transparent");
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // 2. Draw Arrow Shaft
+    ctx.strokeStyle = color; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, targetY); ctx.stroke();
+
+    // 3. Draw Arrow Head with Glow
+    ctx.save();
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = color;
     ctx.fillStyle = color;
-    
-    // Arrow Head
-    const sz = 12;
+    const sz = 10;
     ctx.beginPath();
-    ctx.moveTo(x2, y2);
+    ctx.moveTo(x, targetY);
     if(dir === "up") {
-        ctx.lineTo(x2-sz, y2+sz); ctx.lineTo(x2+sz, y2+sz);
+        ctx.lineTo(x-sz, targetY+sz); ctx.lineTo(x+sz, targetY+sz);
     } else {
-        ctx.lineTo(x2-sz, y2-sz); ctx.lineTo(x2+sz, y2-sz);
+        ctx.lineTo(x-sz, targetY-sz); ctx.lineTo(x+sz, targetY-sz);
     }
     ctx.fill();
     ctx.restore();
 
-    // Label
-    ctx.fillStyle = "white"; ctx.font = "bold 14px Space Mono";
-    ctx.fillText(label, x2 + 20, y2 + (dir==="up"?5:0));
+    // 4. Labels
+    ctx.fillStyle = "white"; ctx.font = "bold 13px Space Mono"; ctx.textAlign = "left";
+    ctx.fillText(label, x + 15, targetY + (dir==="up"?5:0));
+    ctx.font = "10px Space Mono"; ctx.fillStyle = color;
+    ctx.fillText(val, x + 15, targetY + (dir==="up"?18:13));
 }
 
 function animate() {
@@ -232,9 +231,8 @@ function animate() {
     requestAnimationFrame(step);
 }
 
-// Initial draw
 ctx.fillStyle = "#4a607e"; ctx.textAlign="center"; ctx.font="14px Space Grotesk";
-ctx.fillText("Click Compute to see the FBD", 470, 250);
+ctx.fillText("Ready to calculate", 470, 250);
 </script>
 </body>
 </html>
