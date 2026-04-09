@@ -210,6 +210,7 @@ button,input{font-family:var(--font);color:var(--text);border:none;outline:none;
       <div class="chip"><div class="chip-acc"></div><div class="ck">Wheelbase L</div><div class="cv" id="r_L">—</div><div class="cu">m</div></div>
       <div class="chip"><div class="chip-acc"></div><div class="ck">Total Front N_f</div><div class="cv" id="r_Nf">—</div><div class="cu">N</div></div>
       <div class="chip"><div class="chip-acc"></div><div class="ck">Total Rear N_r</div><div class="cv" id="r_Nr">—</div><div class="cu">N</div></div>
+
       <div class="chip big"><div class="chip-acc"></div><div class="ck">Single Front Tire</div><div class="cv" id="r_tireF">—</div><div class="cu">N / tire</div></div>
       <div class="chip big"><div class="chip-acc"></div><div class="ck">Single Rear Tire</div><div class="cv" id="r_tireR">—</div><div class="cu">N / tire</div></div>
     </div>
@@ -331,10 +332,9 @@ function compute(){
   const df_m = df_mm/1000, dr_m = dr_mm/1000;
   const L_m = df_m + dr_m;
   const W_num = massN * gN;
-
   const Nf_num = allNum ? (Math.abs(L_m) > 1e-9 ? W_num * dr_m / L_m : 0) : null;
   const Nr_num = allNum ? (Math.abs(L_m) > 1e-9 ? W_num * df_m / L_m : 0) : null;
-
+  
   const sDF = isN(vDF)?fmtN(df_m,3):str(vDF);
   const sDR = isN(vDR)?fmtN(dr_m,3):str(vDR);
   const sL = sadd(isN(vDF)?df_m:str(vDF), isN(vDR)?dr_m:str(vDR));
@@ -344,7 +344,7 @@ function compute(){
   const sNr = sdiv(smul(sW, isN(vDF)?df_m:str(vDF)), sL);
   const sNfTire = sdiv(sNf, 2);
   const sNrTire = sdiv(sNr, 2);
-
+  
   return{
     vDF, vDR, vM, vG, allNum, symbolic: !allNum,
     df_m, dr_m, L_m, massN, gN, W_num, Nf_num, Nr_num,
@@ -358,110 +358,375 @@ function compute(){
     negDR: isN(vDR) && dr_m < 0
   };
 }
+function fmt(v,d=3){if(v===null||v===undefined)return '?';if(!isFinite(v))return '∞';return Number(v).toFixed(d);}
 
-/* ══ RENDER & ANIMATION ══ */
-const canvas = document.getElementById('fbdCanvas');
-const ctx = canvas.getContext('2d');
-
-function drawForce(x, y, len, dir, color, label, val) {
-    const targetY = y + (dir === "up" ? -len : len);
-    
-    // Glowing Circle Node
-    ctx.save();
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = color;
-    const grad = ctx.createRadialGradient(x, y, 0, x, y, 6);
-    grad.addColorStop(0, "white");
-    grad.addColorStop(0.4, color);
-    grad.addColorStop(1, "transparent");
-    ctx.fillStyle = grad;
-    ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
-
-    // Arrow Shaft
-    ctx.strokeStyle = color; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, targetY); ctx.stroke();
-
-    // Arrow Head
-    ctx.save();
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = color;
-    ctx.fillStyle = color;
-    const sz = 10;
-    ctx.beginPath();
-    ctx.moveTo(x, targetY);
-    if(dir === "up") {
-        ctx.lineTo(x-sz, targetY+sz); ctx.lineTo(x+sz, targetY+sz);
-    } else {
-        ctx.lineTo(x-sz, targetY-sz); ctx.lineTo(x+sz, targetY-sz);
+/* ══ VALIDATION & UI ══ */
+function validate(){
+  const ids=['inp_df','inp_dr','inp_mass','inp_g'];
+  const em=document.getElementById('errMsg');
+  document.querySelectorAll('.iw input').forEach(e=>e.classList.remove('err'));
+  em.style.display='none';
+  for(const id of ids){
+    const el=document.getElementById(id);
+    if(!(el.value||'').trim()){
+      el.classList.add('err');
+      em.textContent=`Every field needs a value (number or symbol).`;
+      em.style.display='block';return false;
     }
-    ctx.fill();
-    ctx.restore();
+  }
+  return true;
+}
+function styleInputs(){
+  ['inp_df','inp_dr','inp_mass','inp_g'].forEach(id=>{
+    const el=document.getElementById(id);
+    const raw=(el.value||'').trim();
+    el.classList.toggle('sym',raw!==''&&isNaN(parseFloat(raw)));
+  });
+}
+document.querySelectorAll('.iw input').forEach(el=>el.addEventListener('input',styleInputs));
 
-    // Labels
-    ctx.fillStyle = "white"; ctx.font = "bold 13px Space Mono"; ctx.textAlign = "left";
-    ctx.fillText(label, x + 15, targetY + (dir==="up"?5:0));
-    ctx.font = "10px Space Mono"; ctx.fillStyle = color;
-    ctx.fillText(val, x + 15, targetY + (dir==="up"?18:13));
+/* ══ RENDER TEXT RESULTS ══ */
+function showResults(p){
+  document.getElementById('resultCard').style.display='block';
+  document.getElementById('modeTag').textContent=p.symbolic?'SYMBOLIC':'NUMERIC';
+  document.getElementById('symBanner').classList.toggle('on',p.symbolic);
+
+  const banner=document.getElementById('caseBanner'); let bh='';
+  if(p.symbolic) bh=`<div class="case-banner cb-sym">🔣 <strong>Symbolic mode:</strong> Formulas generated based on symbols. FBD uses fallback proportions.</div>`;
+  else if(p.zeroMass) bh=`<div class="case-banner cb-info">ℹ️ <strong>Zero Mass:</strong> W = 0 → No normal forces required to hold the car up.</div>`;
+  else if(p.zeroG) bh=`<div class="case-banner cb-info">ℹ️ <strong>Zero Gravity (g=0):</strong> The system is weightless. Therefore, no normal forces are required from the tires to support it.</div>`;
+  else if(p.zeroL) bh=`<div class="case-banner cb-rose">❌ <strong>Zero Wheelbase:</strong> Mathematically impossible layout. The car axles cannot occupy the exact same coordinate without dividing by zero.</div>`;
+  else if(p.negDF) bh=`<div class="case-banner cb-warn">⚠️ <strong>Negative Front Distance:</strong> Center of mass is physically <em>in front</em> of the front axle. The car will tip forward unless the rear axle is tied down (Negative rear normal force).</div>`;
+  else if(p.negDR) bh=`<div class="case-banner cb-warn">⚠️ <strong>Negative Rear Distance:</strong> Center of mass is physically <em>behind</em> the rear axle. The car will tip backward (wheelie) unless the front axle is tied down (Negative front normal force).</div>`;
+  else if(p.zeroDF) bh=`<div class="case-banner cb-warn">⚠️ <strong>Center of Mass over Front Axle:</strong> d_f = 0. All weight is supported by front tires (N_r = 0).</div>`;
+  else if(p.zeroDR) bh=`<div class="case-banner cb-warn">⚠️ <strong>Center of Mass over Rear Axle:</strong> d_r = 0. All weight is supported by rear tires (N_f = 0).</div>`;
+  banner.innerHTML=bh; banner.style.display=bh?'block':'none';
+
+  function sc(id,val){
+    const el=document.getElementById(id);
+    const isSym=typeof val==='string'&&val!=='∞'&&isNaN(parseFloat(val));
+    el.textContent=val; el.className='cv'+(isSym?' sym-val':'');
+  }
+
+  if(p.symbolic){
+    sc('r_W', typeof p.sW==='number'?fmt(p.sW,2):p.sW);
+    sc('r_L', typeof p.sL==='number'?fmt(p.sL,3):p.sL);
+    sc('r_Nf', typeof p.sNf==='number'?fmt(p.sNf,2):p.sNf);
+    sc('r_Nr', typeof p.sNr==='number'?fmt(p.sNr,2):p.sNr);
+    sc('r_tireF', p.sNfTire);
+    sc('r_tireR', p.sNrTire);
+  } else {
+    sc('r_W', fmt(p.W_num,1));
+    sc('r_L', p.zeroL?'0':fmt(p.L_m,3));
+    sc('r_Nf', p.zeroL?'∞':fmt(p.Nf_num,2));
+    sc('r_Nr', p.zeroL?'∞':fmt(p.Nr_num,2));
+    sc('r_tireF', p.zeroL?'∞':fmt(p.Nf_num/2, 2));
+    sc('r_tireR', p.zeroL?'∞':fmt(p.Nr_num/2, 2));
+  }
+  buildEq(p);buildSteps(p);
 }
 
-function animateTab(p, tab, sw=false){
-  window._tab=tab;
-  const go=()=>{
-    let start=null;
-    const frame=(ts)=>{
-      if(!start)start=ts;
-      let t=Math.min((ts-start)/800,1);
-      
-      const Th=TH();
-      ctx.clearRect(0,0,940,540);
-      
-      const groundY = 380;
-      const scale = 240; 
-      const Ax = 470 - (p.L_m * scale / 2);
-      const Bx = 470 + (p.L_m * scale / 2);
-      const Gx = Ax + (p.df_m * scale);
+function buildEq(p){
+  const nF=dark?'#34d399':'#059669', nR=dark?'#fbbf24':'#d97706', wC=dark?'#fb7185':'#e11d48';
+  let html;
+  if(p.symbolic){
+    html=`<span style="color:var(--muted)">1) ΣM_Rear = 0 → N_f(L) - W(d_r) = 0</span><br><strong style="color:${nF}">N_f = ${p.sNf}</strong><br><br><span style="color:var(--muted)">2) ΣM_Front = 0 → N_r(L) - W(d_f) = 0</span><br><strong style="color:${nR}">N_r = ${p.sNr}</strong>`;
+  } else {
+    html=`<span style="color:var(--muted)">ΣM_Rear = 0</span><br><span style="color:${nF}">N_f</span> · ${fmt(p.L_m,3)} = <span style="color:${wC}">${fmt(p.W_num,1)}</span> · ${fmt(p.dr_m,3)}<br><strong style="color:${nF}">N_f = ${fmt(p.Nf_num,2)} N</strong><br><br><span style="color:var(--muted)">ΣM_Front = 0</span><br><span style="color:${nR}">N_r</span> · ${fmt(p.L_m,3)} = <span style="color:${wC}">${fmt(p.W_num,1)}</span> · ${fmt(p.df_m,3)}<br><strong style="color:${nR}">N_r = ${fmt(p.Nr_num,2)} N</strong>`;
+  }
+  document.getElementById('eqBox').innerHTML=html;
+}
 
-      // Simple ground
-      ctx.strokeStyle = Th.ground; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(50, groundY); ctx.lineTo(890, groundY); ctx.stroke();
+function buildSteps(p){
+  let steps=[];
+  if(p.symbolic){
+    steps=[
+      {t:'1. Free Body Diagram', d:'Identify external forces: W (down at G), N_f (up at Front Axle), N_r (up at Rear Axle).', m:'ΣF_y = 0\nΣM = 0', s:1},
+      {t:'2. Wheelbase (L)', d:'Total distance between front and rear axles.', m:`L = d_f + d_r = ${p.sL}`, s:1},
+      {t:'3. Total Weight (W)', d:'W = mass × gravity.', m:`W = ${p.sW}`, s:1},
+      {t:'4. Solve for Front Normal Force (N_f)', d:'Take moments about the Rear axle to eliminate N_r.', m:`ΣM_Rear = 0\nN_f × L = W × d_r\nN_f = ${p.sNf}`, s:1},
+      {t:'5. Solve for Rear Normal Force (N_r)', d:'Take moments about the Front axle to eliminate N_f.', m:`ΣM_Front = 0\nN_r × L = W × d_f\nN_r = ${p.sNr}`, s:1},
+      {t:'6. Force Per Tire', d:'Assuming lateral symmetry, divide the total axle force by 2 (two tires per axle).', m:`Front Tire = N_f / 2\nRear Tire = N_r / 2`, s:1}
+    ];
+  } else {
+    steps=[
+      {t:'1. System Geometry', d:'Calculate the total wheelbase L by adding the distances from G.', m:`L = ${fmt(p.df_m,3)} + ${fmt(p.dr_m,3)} = ${fmt(p.L_m,3)} m`},
+      {t:'2. System Load (Weight)', d:'Calculate W using mass and gravity.', m:`W = ${fmt(p.massN,1)} × ${fmt(p.gN,2)} = ${fmt(p.W_num,2)} N`},
+      {t:'3. Front Axle Force (N_f)', d:'Sum of moments about the Rear axle (B) equals zero. Counter-clockwise = Clockwise.', m:`N_f × ${fmt(p.L_m,3)} = ${fmt(p.W_num,2)} × ${fmt(p.dr_m,3)}\nN_f = ${fmt(p.Nf_num,2)} N`},
+      {t:'4. Rear Axle Force (N_r)', d:'Sum of moments about the Front axle (A) equals zero.', m:`N_r × ${fmt(p.L_m,3)} = ${fmt(p.W_num,2)} × ${fmt(p.df_m,3)}\nN_r = ${fmt(p.Nr_num,2)} N`},
+      {t:'5. Check Equilibrium', d:'Ensure the sum of vertical forces is zero.', m:`ΣF_y = N_f + N_r - W\n${fmt(p.Nf_num,2)} + ${fmt(p.Nr_num,2)} = ${fmt(p.Nf_num+p.Nr_num,2)} N\n(Matches W = ${fmt(p.W_num,2)} N) ✓`},
+      {t:'6. Force Per Tire', d:'Divide the axle totals by 2.', m:`Front: ${fmt(p.Nf_num,2)} / 2 = ${fmt(p.Nf_num/2,2)} N/tire\nRear: ${fmt(p.Nr_num,2)} / 2 = ${fmt(p.Nr_num/2,2)} N/tire`}
+    ];
+  }
+  document.getElementById('stepsWrap').innerHTML=`<div class="steps">${steps.map((s,i)=>`<div class="step ${s.s?'sym':'done'}"><div class="snum">${i+1}</div><div><div class="stitle">${s.t}</div><div class="sdesc">${s.d}</div><div class="math${s.s?' sm':''}">${s.m.replace(/\n/g,'<br>')}</div></div></div>`).join('')}</div>`;
+}
 
-      // Basic Car Body
-      ctx.fillStyle = Th.carBody;
-      ctx.roundRect(Ax-60, groundY-110, (Bx-Ax)+120, 60, 15);
-      ctx.fill();
+/* ══ CANVAS RENDERING ══ */
+const canvas=document.getElementById('fbdCanvas'); const ctx=canvas.getContext('2d');
+let _raf=null;
+window._tab='fbd';window._P=null;
 
-      // Drawing Forces
-      const fLen = 100 * t;
-      if (tab === 'fbd') {
-        drawForce(Gx, groundY-80, fLen, "down", Th.weight, "W", (p.symbolic ? p.sW : p.W_num.toFixed(1)+'N'));
-        drawForce(Ax, groundY, fLen, "up", Th.Nf, "Nf", (p.symbolic ? p.sNf : p.Nf_num.toFixed(1)+'N'));
-        drawForce(Bx, groundY, fLen, "up", Th.Nr, "Nr", (p.symbolic ? p.sNr : p.Nr_num.toFixed(1)+'N'));
-      }
-      
-      if(t<1) requestAnimationFrame(frame);
+function bgFill(){
+  const t=TH(); ctx.fillStyle=t.cvs; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle=t.grid; ctx.lineWidth=1;
+  for(let x=0;x<canvas.width;x+=32){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,canvas.height);ctx.stroke()}
+  for(let y=0;y<canvas.height;y+=32){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(canvas.width,y);ctx.stroke()}
+}
+
+function easeOutQuart(x) { return 1 - Math.pow(1 - Math.max(0,Math.min(1,x)), 4);}
+function easeInOutQuad(x) { x=Math.max(0,Math.min(1,x)); return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;}
+function part(t,a,b){if(t<=a)return 0;if(t>=b)return 1;return easeOutQuart((t-a)/(b-a));}
+
+function arw(x1,y1,x2,y2,col,prog,lbl2,lx,ly,lw=4){
+  if(prog<=0) return;
+  const p=easeOutQuart(prog);
+  const px=x1+(x2-x1)*p,py=y1+(y2-y1)*p;
+  ctx.save();ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=lw;ctx.lineCap='round';
+  ctx.shadowColor=col;ctx.shadowBlur=15;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(px,py);ctx.stroke();
+  if(prog>.6){
+    const k=(prog-.6)/.4,ang=Math.atan2(y2-y1,x2-x1),hs=16;
+    ctx.globalAlpha=k; ctx.beginPath();ctx.moveTo(px,py);
+    ctx.lineTo(px-hs*Math.cos(ang-Math.PI/7),py-hs*Math.sin(ang-Math.PI/7));
+    ctx.lineTo(px-hs*Math.cos(ang+Math.PI/7),py-hs*Math.sin(ang+Math.PI/7));
+    ctx.closePath();ctx.fill();
+  }
+  if(lbl2&&prog>.8){
+    ctx.globalAlpha=(prog-.8)/.2;ctx.shadowBlur=0;
+    txtBox(lx??x2+10, ly??y2-10, lbl2, col, 'bold 16px Space Grotesk', ctx.globalAlpha);
+  }
+  ctx.restore();
+}
+
+function dot(x,y,col,r,lbl2,prog,lx,ly){
+  if(prog<=0)return;const p=easeOutQuart(prog);
+  ctx.save();ctx.globalAlpha=p;ctx.shadowColor=col;ctx.shadowBlur=20;
+  ctx.beginPath();ctx.arc(x,y,r*p,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();
+  if(lbl2&&prog>.7){
+    ctx.globalAlpha=(prog-.7)/.3;ctx.shadowBlur=0;
+    txtBox(lx??x+12, ly??y-12, lbl2, col, 'bold 14px Space Grotesk', ctx.globalAlpha);
+  }
+  ctx.restore();
+}
+
+// 🟢 NEW: CIRCULAR NODE HELPER
+function drawNode(x, y, color, label, prog) {
+  if (prog <= 0) return;
+  const Th = TH();
+  const p = easeOutQuart(prog);
+  ctx.save();
+  ctx.globalAlpha = p;
+  ctx.shadowBlur = 15;
+  ctx.shadowColor = color;
+  
+  // Outer circle
+  ctx.beginPath();
+  ctx.arc(x, y, 6 * p, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  
+  // Inner core
+  ctx.beginPath();
+  ctx.arc(x, y, 3 * p, 0, Math.PI * 2);
+  ctx.fillStyle = Th.bg;
+  ctx.fill();
+  
+  // Label above node
+  if (label && prog > 0.6) {
+    ctx.globalAlpha = (prog - 0.6) / 0.4;
+    ctx.shadowBlur = 0;
+    txtBox(x, y - 18, label, color, 'bold 12px Space Mono', ctx.globalAlpha, 'center');
+  }
+  ctx.restore();
+}
+
+function dash(x1,y1,x2,y2,col,prog=1,d=[8,5],w=2.5){
+  if(prog<=0)return;
+  const p=easeOutQuart(prog);ctx.save();ctx.strokeStyle=col;ctx.lineWidth=w;ctx.setLineDash(d);ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x1+(x2-x1)*p,y1+(y2-y1)*p);ctx.stroke();ctx.restore();
+}
+
+function txtBox(x,y,s,col,font,a=1,align='left'){
+  if(a<=0)return;
+  const Th=TH();
+  ctx.save();ctx.globalAlpha=Math.max(0,Math.min(1,a));
+  ctx.font=font||'12px Space Grotesk,sans-serif';
+  ctx.textAlign=align; ctx.textBaseline='middle';
+  const m=ctx.measureText(s);
+  const w=m.width, h=parseInt(ctx.font,10)*1.2;
+  const padX=6, padY=4;
+  let bx=x, by=y-h/2;
+  if(align==='center') bx=x-w/2;
+  if(align==='right') bx=x-w;
+  ctx.fillStyle=Th.textBg;
+  ctx.beginPath();ctx.roundRect(bx-padX, by-padY, w+padX*2, h+padY*2, 6);ctx.fill();
+  ctx.fillStyle=col; ctx.fillText(s,x,y); 
+  ctx.restore();
+}
+
+function getCoords(p){
+  const CW=canvas.width, CH=canvas.height;
+  const lR = p.allNum && Math.abs(p.L_m) > 1e-6 ? p.L_m : 2.35;
+  let dfR = p.allNum ? p.df_m : 1.386;
+  let drR = p.allNum ? p.dr_m : 0.964;
+  if(dfR < -1.5) dfR = -1.5;
+  if(dfR > lR+1.5) dfR = lR+1.5;
+  const scale = Math.min(CW,CH) * 0.75 / Math.abs(lR || 1);
+  const span = lR * scale;
+  const By = CH * 0.75;
+  const Ax = CW/2 - span/2; 
+  const Bx = CW/2 + span/2;
+  const Gx = Ax + dfR * scale;
+  const Gy = By - 80;
+  return {Ax, By, Bx, Gx, Gy, scale, CW, CH};
+}
+
+/* ══ FBD VIEW ══ */
+function drawFBD(p,t){
+  bgFill(); const Th=TH(); const C = getCoords(p);
+  const tGnd=part(t,0,.15), tCar=part(t,.1,.3), tPts=part(t,.25,.45), tDims=part(t,.4,.65), tForces=part(t,.6,1);
+
+  ctx.save();ctx.globalAlpha=tGnd;
+  ctx.fillStyle=Th.ground;ctx.fillRect(0,C.By+30,C.CW,C.CH);
+  ctx.strokeStyle=Th.gndL;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,C.By+30);ctx.lineTo(C.CW,C.By+30);ctx.stroke();
+  ctx.restore();
+
+  const wr=26;
+  [C.Ax, C.Bx].forEach((x, i) => {
+    ctx.save();ctx.globalAlpha=tGnd;
+    ctx.beginPath();ctx.arc(x,C.By,wr,0,Math.PI*2);ctx.fillStyle=Th.wheel;ctx.fill();
+    ctx.strokeStyle=Th.wheelR;ctx.lineWidth=4;ctx.stroke();
+    ctx.restore();
+  });
+
+  ctx.save();ctx.globalAlpha=easeInOutQuad(tCar);
+  ctx.strokeStyle=Th.carLine;ctx.lineWidth=10;ctx.lineCap='round';ctx.shadowColor=Th.carLine;ctx.shadowBlur=15;
+  ctx.beginPath();ctx.moveTo(C.Ax,C.By);ctx.lineTo(C.Ax, C.Gy+25);ctx.lineTo(C.Bx, C.Gy+25);ctx.lineTo(C.Bx, C.By);ctx.stroke();
+  ctx.fillStyle=Th.carBody; ctx.globalAlpha=easeInOutQuad(tCar)*0.6; ctx.shadowBlur=0;
+  ctx.beginPath();ctx.roundRect(C.Ax-40, C.Gy-25, (C.Bx-C.Ax)+80, 65, 20); ctx.fill();
+  ctx.restore();
+
+  // Points & Circular Nodes
+  drawNode(C.Ax, C.By, Th.Nf, 'A', tPts);
+  drawNode(C.Bx, C.By, Th.Nr, 'B', tPts);
+  drawNode(C.Gx, C.Gy, Th.weight, 'G', tPts);
+
+  dash(C.Ax,C.By+50, C.Gx,C.By+50, Th.dim, tDims, [5,4], 2.5);
+  dash(C.Gx,C.By+50, C.Bx,C.By+50, Th.dim, tDims, [5,4], 2.5);
+  if(tDims>0.6){
+     const k=(tDims-.6)/.4;
+     txtBox((C.Ax+C.Gx)/2, C.By+50, `d_f = ${p.allNum?fmt(p.df_m,3)+'m':p.sDF}`, Th.dim, 'bold 14px Space Mono', k, 'center');
+     txtBox((C.Gx+C.Bx)/2, C.By+50, `d_r = ${p.allNum?fmt(p.dr_m,3)+'m':p.sDR}`, Th.dim, 'bold 14px Space Mono', k, 'center');
+  }
+
+  const fw=140;
+  arw(C.Ax,C.By, C.Ax, C.By-fw, Th.Nf, tForces, 'N_f', C.Ax-40, C.By-fw+15, 4);
+  arw(C.Bx,C.By, C.Bx, C.By-fw, Th.Nr, tForces, 'N_r', C.Bx+20, C.By-fw+15, 4);
+  arw(C.Gx,C.Gy, C.Gx, C.Gy+fw, Th.weight, tForces, 'W', C.Gx+15, C.Gy+fw-10, 4);
+}
+
+/* ══ GEOMETRY VIEW ══ */
+function drawGeom(p,t){
+  bgFill(); const Th=TH(); const C = getCoords(p);
+  const t0=part(t,0,.2), t1=part(t,.1,.4), t2=part(t,.3,.6), t3=part(t,.5,1);
+  dash(0,C.By,C.CW,C.By,Th.gndL,t0,[10,6],1.5);
+  
+  drawNode(C.Ax, C.By, Th.pt, 'A (Front)', t1);
+  drawNode(C.Bx, C.By, Th.pt, 'B (Rear)', t1);
+  drawNode(C.Gx, C.Gy, Th.weight, 'G (CoM)', t1);
+
+  dash(C.Gx, C.Gy, C.Gx, C.By, Th.muted, t2, [6,5], 1.5);
+  dash(C.Ax,C.By+40, C.Gx,C.By+40, Th.dim, t2, [6,5], 2.5);
+  dash(C.Gx,C.By+40, C.Bx,C.By+40, Th.dim, t2, [6,5], 2.5);
+  dash(C.Ax,C.By+90, C.Bx,C.By+90, Th.carLine, t3, [6,5], 2.5);
+
+  if(t3>0.5){
+    const k=(t3-.5)/.5;
+    txtBox((C.Ax+C.Gx)/2, C.By+40, `d_f = ${p.allNum?fmt(p.df_m,3)+'m':p.sDF}`, Th.dim, 'bold 15px Space Mono', k, 'center');
+    txtBox((C.Gx+C.Bx)/2, C.By+40, `d_r = ${p.allNum?fmt(p.dr_m,3)+'m':p.sDR}`, Th.dim, 'bold 15px Space Mono', k, 'center');
+    txtBox((C.Ax+C.Bx)/2, C.By+90, `Total Wheelbase L = ${p.allNum?fmt(p.L_m,3)+'m':p.sL}`, Th.carLine, 'bold 16px Space Mono', k, 'center');
+  }
+}
+
+/* ══ MOMENTS VIEW ══ */
+function drawMoments(p,t){
+  bgFill(); const Th=TH(); const C = getCoords(p);
+  const t0=part(t,0,.2), t1=part(t,.2,.5), t2=part(t,.5,.9);
+
+  drawNode(C.Ax, C.By, Th.pt, 'A', t0);
+  drawNode(C.Bx, C.By, Th.pt, 'B', t0);
+  drawNode(C.Gx, C.Gy, Th.weight, 'G', t0);
+
+  arw(C.Gx,C.Gy, C.Gx, C.Gy+120, Th.weight, t0, 'W', C.Gx+15, C.Gy+110);
+  if(t1>0){
+    dash(C.Gx, C.By, C.Bx, C.By, Th.weight, t1, [5,4], 3);
+    arw(C.Ax,C.By, C.Ax, C.By-120, Th.Nf, t1, 'N_f', C.Ax-40, C.By-110);
+    dash(C.Ax, C.By-20, C.Bx, C.By-20, Th.Nf, t1, [5,4], 3);
+    if(t1>0.6) {
+       const k = (t1-.6)/.4;
+       txtBox((C.Gx+C.Bx)/2, C.By, `d_r`, Th.weight, 'bold 14px Space Mono', k, 'center');
+       txtBox((C.Ax+C.Bx)/2, C.By-20, `L (Force Arm)`, Th.Nf, 'bold 14px Space Mono', k, 'center');
     }
-    requestAnimationFrame(frame);
+  }
+  if(t2>0){
+    dash(C.Ax, C.By+20, C.Gx, C.By+20, Th.weight, t2, [5,4], 3);
+    arw(C.Bx,C.By, C.Bx, C.By-120, Th.Nr, t2, 'N_r', C.Bx+15, C.By-110);
+    dash(C.Ax, C.By-50, C.Bx, C.By-50, Th.Nr, t2, [5,4], 3);
+    if(t2>0.6) {
+       const k = (t2-.6)/.4;
+       txtBox((C.Ax+C.Gx)/2, C.By+20, `d_f`, Th.weight, 'bold 14px Space Mono', k, 'center');
+       txtBox((C.Ax+C.Bx)/2, C.By-50, `L (Force Arm)`, Th.Nr, 'bold 14px Space Mono', k, 'center');
+    }
+  }
+}
+
+/* ══ ANIMATION LOOP ══ */
+function animateTab(p,tab,sw=false){
+  if(_raf){cancelAnimationFrame(_raf);_raf=null}
+  const badge=document.getElementById('statusBadge');
+  function go(){
+    badge.classList.add('on');
+    const dur=2000,start=performance.now(); 
+    function frame(now){
+      const t=Math.min((now-start)/dur,1);
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      if(tab==='fbd')drawFBD(p,t);
+      else if(tab==='geom')drawGeom(p,t);
+      else drawMoments(p,t);
+      if(t<1){_raf=requestAnimationFrame(frame)}else{badge.classList.remove('on')}
+    }
+    _raf=requestAnimationFrame(frame);
   }
   if(sw){canvas.classList.add('switching');setTimeout(()=>{canvas.classList.remove('switching');go()},280)}
   else go();
 }
 
-/* ══ INITIALIZATION ══ */
 function drawPlaceholder(){
-  const Th=TH(); ctx.clearRect(0,0,940,540);
-  ctx.fillStyle = Th.text; ctx.font = "700 20px Space Grotesk"; ctx.textAlign = "center";
-  ctx.fillText("⚡ Enter values and click Solve & Animate", 470, 250);
+  bgFill();const Th=TH();
+  const cx=canvas.width/2,cy=canvas.height/2;
+  txtBox(cx, cy-20, '⚡ Enter values and click Solve & Animate', Th.text, '700 20px Space Grotesk', 1, 'center');
+  txtBox(cx, cy+20, 'Numbers or symbols — 1400, -5, m, g, $, anything goes', Th.muted, '15px Space Grotesk', 1, 'center');
 }
 
+/* ══ BIND EVENTS ══ */
 document.getElementById('solveBtn').addEventListener('click',()=>{
+  if(!validate())return;
   const p=compute();
-  if(!p) return;
-  window._P=p;
-  document.getElementById('resultCard').style.display = 'block';
-  animateTab(p, 'fbd', false);
+  if(!p){document.getElementById('errMsg').textContent='Fill all fields.';document.getElementById('errMsg').style.display='block';return}
+  window._P=p;showResults(p);animateTab(p,window._tab||'fbd',false);
+});
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b===btn));
+    window._tab=btn.dataset.tab;
+    if(window._P)animateTab(window._P,window._tab,true);else drawPlaceholder();
+  });
+});
+document.querySelectorAll('.iw input').forEach(inp=>{
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('solveBtn').click()});
 });
 
+styleInputs();
 drawPlaceholder();
 </script>
 </body>
