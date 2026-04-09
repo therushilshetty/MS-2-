@@ -16,172 +16,357 @@
   --orange:#fb923c;--orange-glow:rgba(251,146,60,.15);
   --green:#34d399;--green-glow:rgba(52,211,153,.14);
   --rose:#fb7185;--rose-glow:rgba(251,113,133,.13);
-  --yellow:#fbbf24;
+  --yellow:#fbbf24;--yellow-glow:rgba(251,191,36,.13);
   --grid-line:rgba(56,189,248,.04);
   --font:'Space Grotesk',sans-serif;--mono:'Space Mono',monospace;
-  --r-lg:20px;
+  --r-sm:8px;--r-md:14px;--r-lg:20px;
+}
+[data-theme="light"]{
+  --bg:#f0f4fa;--surface:#fff;--surface2:#f5f9ff;--surface3:#eaf2ff;
+  --border:rgba(14,80,180,.10);--divider:rgba(14,80,180,.06);
+  --text:#0f172a;--muted:#4b6b96;--faint:#94a3b8;
+  --cyan:#0284c7;--cyan-glow:rgba(2,132,199,.10);
+  --violet:#7c3aed;--violet-glow:rgba(124,58,237,.10);
+  --orange:#ea580c;--orange-glow:rgba(234,88,12,.10);
+  --green:#059669;--green-glow:rgba(5,150,105,.10);
+  --rose:#e11d48;--rose-glow:rgba(225,29,72,.10);
+  --yellow:#d97706;--yellow-glow:rgba(217,119,6,.10);
+  --grid-line:rgba(14,80,180,.04);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
-header{height:56px;padding:0 24px;display:flex;justify-content:space-between;align-items:center;background:var(--surface);border-bottom:1px solid var(--border);backdrop-filter:blur(10px);position:sticky;top:0;z-index:100}
-.logo{width:32px;height:32px;background:linear-gradient(135deg,var(--cyan),var(--violet));border-radius:8px;display:grid;place-items:center;font-weight:bold;font-size:12px;color:white}
-.layout{display:grid;grid-template-columns:350px 1fr;height:calc(100vh - 56px)}
-.sidebar{padding:20px;background:rgba(13,17,23,0.8);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;gap:15px}
-.main-col{padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:20px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px}
-.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
-input{width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:white;font-family:var(--mono);font-size:13px}
-input:focus{border-color:var(--cyan);outline:none}
-.solve-btn{width:100%;padding:12px;background:linear-gradient(135deg,var(--cyan),var(--violet));border:none;border-radius:10px;color:white;font-weight:bold;cursor:pointer;margin-top:10px}
-.canvas-container{position:relative;background:#000;border-radius:15px;border:1px solid var(--border);overflow:hidden}
-canvas{display:block;width:100%;height:auto}
-.case-banner{padding:10px;border-radius:8px;font-size:12px;margin-bottom:10px;display:none}
-.cb-rose{background:var(--rose-glow);border:1px solid var(--rose);color:var(--rose);display:block}
-.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.res-box{background:var(--surface2);padding:12px;border-radius:10px;border:1px solid var(--border);text-align:center}
-.res-label{font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
-.res-val{font-family:var(--mono);font-weight:bold;color:var(--cyan)}
+html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth}
+body{
+  font-family:var(--font);background:var(--bg);
+  background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);
+  background-size:40px 40px;color:var(--text);min-height:100vh;
+}
+button,input{font-family:var(--font);color:var(--text);border:none;outline:none;background:none;cursor:pointer}
+
+/* ══ LAYOUT ══ */
+.hdr{position:sticky;top:0;z-index:30;display:flex;justify-content:space-between;align-items:center;padding:0 24px;height:56px;background:color-mix(in srgb,var(--surface) 85%,transparent);border-bottom:1px solid var(--border);backdrop-filter:blur(16px)}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--cyan),var(--violet));display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:700;color:#fff;box-shadow:0 0 20px var(--cyan-glow)}
+.brand-name{font-size:15px;font-weight:700;letter-spacing:-.3px}
+.brand-sub{font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:.4px;text-transform:uppercase}
+.hdr-r{display:flex;gap:8px;align-items:center}
+.pill{padding:4px 11px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;border:1px solid var(--border);color:var(--cyan);background:var(--cyan-glow)}
+.sym-pill{color:var(--violet);background:var(--violet-glow);border-color:rgba(167,139,250,.25)}
+.icon-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);display:grid;place-items:center;transition:.2s}
+.icon-btn:hover{border-color:var(--cyan);background:var(--cyan-glow)}
+
+.layout{display:grid;grid-template-columns:355px 1fr;min-height:calc(100vh - 56px)}
+.sidebar{padding:16px;border-right:1px solid var(--border);background:color-mix(in srgb,var(--surface) 70%,transparent);display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+.main-col{padding:16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+
+/* ══ CARDS & INPUTS ══ */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+.card-pad{padding:16px}
+.card-head{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px}
+.ibox{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:13px;flex-shrink:0}
+.ib-cyan{background:var(--cyan-glow);color:var(--cyan);border:1px solid rgba(56,189,248,.25)}
+.ib-violet{background:var(--violet-glow);color:var(--violet);border:1px solid rgba(167,139,250,.25)}
+.ib-orange{background:var(--orange-glow);color:var(--orange);border:1px solid rgba(251,146,60,.25)}
+.ib-green{background:var(--green-glow);color:var(--green);border:1px solid rgba(52,211,153,.25)}
+.ct{font-size:12px;font-weight:700}.cs{font-size:10px;color:var(--muted);margin-top:1px}
+
+.slabel{font-size:9px;font-weight:700;font-family:var(--mono);color:var(--faint);letter-spacing:1px;text-transform:uppercase;padding:8px 0 6px;border-bottom:1px solid var(--divider);margin:4px 0 8px}
+.field{margin-bottom:8px}
+.field label{display:flex;justify-content:space-between;align-items:center;font-size:9px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+.utag{font-size:9px;font-family:var(--mono);text-transform:none;letter-spacing:0;font-weight:400;padding:1px 6px;border-radius:999px}
+.utag-c{color:var(--cyan);background:var(--cyan-glow);border:1px solid rgba(56,189,248,.2)}
+.utag-v{color:var(--violet);background:var(--violet-glow);border:1px solid rgba(167,139,250,.2)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.iw input{width:100%;padding:8px 11px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;font-size:12px;transition:.2s;color:var(--text)}
+.iw input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px var(--cyan-glow)}
+.iw input.sym{border-color:rgba(167,139,250,.5);color:var(--violet);font-family:var(--mono);background:rgba(167,139,250,.05)}
+.iw input.err{border-color:var(--rose);box-shadow:0 0 0 3px var(--rose-glow)}
+
+.solve-btn{width:100%;padding:11px;border-radius:12px;font-size:13px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--cyan),var(--violet),var(--orange));box-shadow:0 4px 20px rgba(56,189,248,.2);transition:.25s;position:relative;overflow:hidden;margin-top:10px}
+.solve-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent,rgba(255,255,255,.13),transparent);transform:translateX(-100%);transition:.5s}
+.solve-btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(56,189,248,.3)}
+.solve-btn:hover::after{transform:translateX(100%)}
+
+.sym-banner{display:none;padding:9px 12px;border-radius:10px;background:var(--violet-glow);border:1px solid rgba(167,139,250,.3);font-size:11px;color:var(--violet);line-height:1.6;margin-top:8px}
+.sym-banner.on{display:block}
+.errmsg{display:none;font-size:11px;color:var(--rose);background:var(--rose-glow);border:1px solid rgba(251,113,133,.25);padding:8px 11px;border-radius:9px;margin-top:8px;line-height:1.6}
+
+/* ══ RESULTS CHIPS ══ */
+.rg{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.chip{padding:10px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);text-align:center;position:relative;overflow:hidden;transition:.25s}
+.chip:hover{border-color:var(--cyan);transform:translateY(-1px)}
+.chip-acc{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--violet))}
+.ck{font-size:9px;font-weight:700;font-family:var(--mono);letter-spacing:.5px;text-transform:uppercase;color:var(--faint);margin-bottom:4px}
+.cv{font-family:var(--mono);font-size:15px;font-weight:700;line-height:1.2;word-break:break-all}
+.cv.sym-val{font-size:11px;color:var(--violet)}
+.cu{font-size:9px;color:var(--muted);margin-top:2px}
+.chip.big{grid-column:1/-1;background:linear-gradient(135deg,rgba(56,189,248,.06),rgba(167,139,250,.06));border-color:rgba(56,189,248,.3)}
+.chip.big .cv{font-size:18px;color:var(--cyan)}
+.chip.big .cv.sym-val{font-size:12px;color:var(--violet)}
+.chip.big .chip-acc{background:linear-gradient(90deg,var(--cyan),var(--violet),var(--orange))}
+
+/* ══ CANVAS ZONE ══ */
+.fbd-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border)}
+.tabs{display:flex;gap:3px;background:var(--surface2);padding:3px;border-radius:10px}
+.tab{padding:5px 12px;border-radius:8px;font-size:11px;font-weight:700;color:var(--muted);transition:.2s}
+.tab.active{background:var(--surface);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.canvas-zone{position:relative;background:radial-gradient(ellipse at 30% 40%,color-mix(in srgb,var(--cyan-glow) 60%,transparent),transparent 55%),radial-gradient(ellipse at 70% 70%,color-mix(in srgb,var(--violet-glow) 40%,transparent),transparent 50%),var(--bg);display:grid;place-items:center;padding:14px}
+#fbdCanvas{border-radius:12px;width:100%;max-width:940px;height:auto;display:block;transition:opacity .3s,transform .4s cubic-bezier(.16,1,.3,1);box-shadow:0 8px 40px rgba(0,0,0,.55)}
+#fbdCanvas.switching{opacity:.05;transform:scale(.97)}
+.status{position:absolute;right:22px;bottom:20px;display:none;align-items:center;gap:7px;padding:6px 11px;border-radius:999px;font-size:10px;font-weight:700;border:1px solid var(--border);background:color-mix(in srgb,var(--surface) 80%,transparent);backdrop-filter:blur(8px)}
+.status.on{display:flex}
+.dot{width:6px;height:6px;border-radius:999px;background:var(--green);animation:blink 1.2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ══ STEPS & EQUATIONS ══ */
+.steps{display:flex;flex-direction:column}
+.step{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--divider)}
+.step:last-child{border:none}
+.snum{width:24px;height:24px;border-radius:999px;flex-shrink:0;display:grid;place-items:center;font:700 10px var(--mono);color:var(--muted);background:var(--surface2);border:1px solid var(--border)}
+.step.done .snum{background:var(--cyan);border-color:var(--cyan);color:#07090f}
+.step.sym .snum{background:var(--violet);border-color:var(--violet);color:#fff}
+.stitle{font-size:12px;font-weight:700;margin-bottom:2px}
+.sdesc{font-size:11px;color:var(--muted);line-height:1.6}
+.math{margin-top:5px;padding:6px 10px;border-radius:7px;background:var(--surface2);border-left:3px solid var(--cyan);font:11px var(--mono);color:var(--cyan);line-height:1.9}
+.math.sm{border-left-color:var(--violet);color:var(--violet)}
+
+.eqbox{padding:14px 16px;border-radius:12px;background:linear-gradient(135deg,rgba(56,189,248,.05),rgba(167,139,250,.05));border:1px solid rgba(56,189,248,.2);font:13px/1.9 var(--mono);word-break:break-all}
+.case-banner{padding:9px 12px;border-radius:9px;font-size:11px;line-height:1.6;margin-bottom:10px}
+.cb-warn{background:var(--orange-glow);border:1px solid rgba(251,146,60,.3);color:var(--orange)}
+.cb-info{background:var(--cyan-glow);border:1px solid rgba(56,189,248,.3);color:var(--cyan)}
+.cb-sym{background:var(--violet-glow);border:1px solid rgba(167,139,250,.3);color:var(--violet)}
+.cb-rose{background:var(--rose-glow);border:1px solid rgba(251,113,133,.3);color:var(--rose)}
+.notice{padding:12px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:11px;color:var(--muted);line-height:1.7}
+
+@media(max-width:960px){.layout{grid-template-columns:1fr}.sidebar{border-right:none;border-bottom:1px solid var(--border)}}
 </style>
 </head>
 <body>
 
-<header>
-  <div style="display:flex; align-items:center; gap:10px;">
+<header class="hdr">
+  <div class="brand">
     <div class="logo">SM</div>
-    <span style="font-weight:bold; letter-spacing:-0.5px">StaticsMaster Pro</span>
+    <div>
+      <div class="brand-name">StaticsMaster</div>
+      <div class="brand-sub">CAR CENTER OF MASS · ΣM = 0</div>
+    </div>
   </div>
-  <div id="modeTag" style="font-size:10px; color:var(--cyan); border:1px solid var(--cyan); padding:2px 8px; border-radius:20px">NUMERIC</div>
+  <div class="hdr-r">
+    <div class="pill">Statics</div>
+    <div class="pill sym-pill" id="modeTag">NUMERIC</div>
+    <button class="icon-btn" id="themeBtn" title="Toggle theme">
+      <svg id="themeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
+    </button>
+  </div>
 </header>
 
 <div class="layout">
-  <aside class="sidebar">
-    <div class="card">
-      <div style="font-size:12px; font-weight:bold; color:var(--muted); text-transform:uppercase">Dimensions (mm)</div>
-      <div class="field-row">
-        <div><label style="font-size:10px">Axle A → G</label><input id="inp_df" value="1386"></div>
-        <div><label style="font-size:10px">G → Axle B</label><input id="inp_dr" value="964"></div>
+<aside class="sidebar">
+  <div class="card card-pad">
+    <div class="card-head">
+      <div class="ibox ib-cyan">📐</div>
+      <div>
+        <div class="ct">Inputs — Numbers OR Any Symbol</div>
+        <div class="cs">Type 1400, or m, or $, or anything.</div>
       </div>
-      <div style="font-size:12px; font-weight:bold; color:var(--muted); text-transform:uppercase; margin-top:15px">Physics</div>
-      <div class="field-row">
-        <div><label style="font-size:10px">Mass (kg)</label><input id="inp_mass" value="1400"></div>
-        <div><label style="font-size:10px">Gravity (m/s²)</label><input id="inp_g" value="9.81"></div>
-      </div>
-      <button class="solve-btn" onclick="solve()">⚡ Compute Equilibrium</button>
     </div>
 
-    <div class="card" id="resCard" style="display:none">
-      <div id="caseBanner"></div>
-      <div class="result-grid">
-        <div class="res-box"><div class="res-label">Weight</div><div class="res-val" id="r_W">-</div></div>
-        <div class="res-box"><div class="res-label">Wheelbase</div><div class="res-val" id="r_L">-</div></div>
-        <div class="res-box"><div class="res-label">Force Nf</div><div class="res-val" id="r_Nf">-</div></div>
-        <div class="res-box"><div class="res-label">Force Nr</div><div class="res-val" id="r_Nr">-</div></div>
+    <div class="slabel">Geometry (Axles to Center G)</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Front Axle → G <span class="utag utag-c">mm/sym</span></label>
+        <div class="iw"><input id="inp_df" value="1386" placeholder="1386 or d_f or $"></div>
+      </div>
+      <div class="field">
+        <label>G → Rear Axle <span class="utag utag-c">mm/sym</span></label>
+        <div class="iw"><input id="inp_dr" value="964" placeholder="964 or d_r or $"></div>
       </div>
     </div>
-  </aside>
 
-  <main class="main-col">
-    <div class="canvas-container">
-      <canvas id="fbdCanvas" width="940" height="500"></canvas>
+    <div class="slabel">Load / Physics</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Total Mass <span class="utag utag-v">kg / sym</span></label>
+        <div class="iw"><input id="inp_mass" value="1400" placeholder="1400 or m"></div>
+      </div>
+      <div class="field">
+        <label>Gravity <span class="utag utag-v">m/s² / sym</span></label>
+        <div class="iw"><input id="inp_g" value="9.81" placeholder="9.81 or g"></div>
+      </div>
     </div>
-  </main>
+
+    <button class="solve-btn" id="solveBtn">⚡ Solve &amp; Animate</button>
+    <div class="errmsg" id="errMsg"></div>
+    <div class="sym-banner" id="symBanner">🔣 <strong>Symbolic mode</strong> — General formulas shown.</div>
+  </div>
+
+  <div class="card card-pad" id="resultCard" style="display:none">
+    <div class="card-head">
+      <div class="ibox ib-green">✓</div>
+      <div><div class="ct">Results</div><div class="cs">Normal forces per tire</div></div>
+    </div>
+    <div id="caseBanner" style="display:none"></div>
+    <div class="rg">
+      <div class="chip"><div class="chip-acc"></div><div class="ck">Total Weight W</div><div class="cv" id="r_W">—</div><div class="cu">N</div></div>
+      <div class="chip"><div class="chip-acc"></div><div class="ck">Wheelbase L</div><div class="cv" id="r_L">—</div><div class="cu">m</div></div>
+      <div class="chip"><div class="chip-acc"></div><div class="ck">Total Front N_f</div><div class="cv" id="r_Nf">—</div><div class="cu">N</div></div>
+      <div class="chip"><div class="chip-acc"></div><div class="ck">Total Rear N_r</div><div class="cv" id="r_Nr">—</div><div class="cu">N</div></div>
+      <div class="chip big"><div class="chip-acc"></div><div class="ck">Single Front Tire</div><div class="cv" id="r_tireF">—</div><div class="cu">N / tire</div></div>
+      <div class="chip big"><div class="chip-acc"></div><div class="ck">Single Rear Tire</div><div class="cv" id="r_tireR">—</div><div class="cu">N / tire</div></div>
+    </div>
+  </div>
+</aside>
+
+<main class="main-col">
+
+  <section class="card">
+    <div class="fbd-header">
+      <div>
+        <div class="ct">Free Body Diagram</div>
+        <div class="cs">Animated · Symbolic + Numeric Output</div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" data-tab="fbd">Full FBD</button>
+        <button class="tab" data-tab="geom">Geometry</button>
+        <button class="tab" data-tab="moments">Moments</button>
+      </div>
+    </div>
+    <div class="canvas-zone" style="min-height:540px">
+      <canvas id="fbdCanvas" width="940" height="540"></canvas>
+      <div class="status" id="statusBadge"><span class="dot"></span><span id="statusTxt">Drawing…</span></div>
+    </div>
+  </section>
+
+  <section class="card card-pad">
+    <div class="card-head">
+      <div class="ibox ib-orange">📝</div>
+      <div><div class="ct">Step-by-Step Solution</div><div class="cs">Moment equilibrium about axles</div></div>
+    </div>
+    <div id="stepsWrap" class="notice">Enter values above and click <strong>⚡ Solve &amp; Animate</strong></div>
+  </section>
+
+  <section class="card card-pad">
+    <div class="card-head">
+      <div class="ibox ib-violet">∑</div>
+      <div><div class="ct">Equilibrium Equations</div><div class="cs">ΣM_Rear = 0  &  ΣM_Front = 0</div></div>
+    </div>
+    <div class="eqbox" id="eqBox">ΣM = 0</div>
+  </section>
+
+</main>
 </div>
 
 <script>
+/* ══ THEME ══ */
+const root=document.documentElement;
+let dark=true;
+function setIcon(){
+  document.getElementById('themeIcon').innerHTML=dark
+    ?'<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>'
+    :'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+}
+setIcon();
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  dark=!dark;root.setAttribute('data-theme',dark?'dark':'light');setIcon();
+  if(window._P)animateTab(window._P,window._tab||'fbd',true);else drawPlaceholder();
+});
+
+function TH(){
+  return dark?{
+    bg:'#07090f',cvs:'#0d1117',text:'#e2eeff',muted:'#8ba3c9',faint:'#4a607e',
+    carBody:'#1e3a5f',carLine:'#38bdf8',ground:'#1e293b',gndL:'#334155',
+    wheel:'#1e3a5f',wheelR:'#38bdf8',
+    Nf:'#34d399',Nr:'#fbbf24',weight:'#fb7185',
+    dim:'#a78bfa',pt:'#38bdf8',
+    grid:'rgba(56,189,248,.04)',box:'rgba(13,17,23,.92)',boxB:'rgba(56,189,248,.28)',
+    textBg:'rgba(13,17,23,0.75)'
+  }:{
+    bg:'#f0f4fa',cvs:'#ffffff',text:'#0f172a',muted:'#4b6b96',faint:'#94a3b8',
+    carBody:'#bfdbfe',carLine:'#0284c7',ground:'#e2e8f0',gndL:'#94a3b8',
+    wheel:'#dbeafe',wheelR:'#0284c7',
+    Nf:'#059669',Nr:'#d97706',weight:'#e11d48',
+    dim:'#7c3aed',pt:'#0284c7',
+    grid:'rgba(14,80,180,.04)',box:'rgba(255,255,255,.95)',boxB:'rgba(14,80,180,.25)',
+    textBg:'rgba(255,255,255,0.75)'
+  };
+}
+
+/* ══ SYMBOLIC ALGEBRA PARSER ══ */
+function parseV(id){
+  const raw=(document.getElementById(id).value||'').trim();
+  if(!raw)return null;
+  const n=parseFloat(raw);
+  if(!isNaN(n))return{isNum:true,num:n,str:raw};
+  return{isNum:false,num:null,str:raw};
+}
+function num(v,fb=1){return(v&&v.isNum)?v.num:fb;}
+function str(v,fb='?'){return v?v.str:fb;}
+function isN(v){return v&&v.isNum;}
+
+function fmtN(v,d=3){if(!isFinite(v))return '∞';return Number(v).toFixed(d).replace(/\.?0+$/,'');}
+function smul(a,b){
+  if(typeof a==='number'&&typeof b==='number')return a*b;
+  if(a===0||b===0)return 0;if(a===1)return b;if(b===1)return a;
+  return `${typeof a==='number'?fmtN(a):a}·${typeof b==='number'?fmtN(b):b}`;
+}
+function sadd(a,b){
+  if(typeof a==='number'&&typeof b==='number')return a+b;
+  if(a===0)return b;if(b===0)return a;
+  return `(${typeof a==='number'?fmtN(a):a} + ${typeof b==='number'?fmtN(b):b})`;
+}
+function sdiv(a,b){
+  if(typeof a==='number'&&typeof b==='number')return b!==0?a/b:Infinity;
+  if(a===0)return 0;
+  return `(${typeof a==='number'?fmtN(a):a}) / (${typeof b==='number'?fmtN(b):b})`;
+}
+
+/* ══ CORE PHYSICS COMPUTE ══ */
+function compute(){
+  const vDF=parseV('inp_df'), vDR=parseV('inp_dr');
+  const vM=parseV('inp_mass'), vG=parseV('inp_g');
+  if(!vDF||!vDR||!vM||!vG)return null;
+  const allNum = [vDF,vDR,vM,vG].every(v=>v.isNum);
+
+  const df_mm = num(vDF,1386), dr_mm = num(vDR,964);
+  const massN = num(vM,1400), gN = num(vG,9.81);
+  const df_m = df_mm/1000, dr_m = dr_mm/1000;
+  const L_m = df_m + dr_m;
+  const W_num = massN * gN;
+
+  const Nf_num = allNum ? (Math.abs(L_m) > 1e-9 ? W_num * dr_m / L_m : 0) : null;
+  const Nr_num = allNum ? (Math.abs(L_m) > 1e-9 ? W_num * df_m / L_m : 0) : null;
+
+  const sDF = isN(vDF)?fmtN(df_m,3):str(vDF);
+  const sDR = isN(vDR)?fmtN(dr_m,3):str(vDR);
+  const sL = sadd(isN(vDF)?df_m:str(vDF), isN(vDR)?dr_m:str(vDR));
+  const sW = smul(isN(vM)?massN:str(vM), isN(vG)?gN:str(vG));
+
+  const sNf = sdiv(smul(sW, isN(vDR)?dr_m:str(vDR)), sL);
+  const sNr = sdiv(smul(sW, isN(vDF)?df_m:str(vDF)), sL);
+  const sNfTire = sdiv(sNf, 2);
+  const sNrTire = sdiv(sNr, 2);
+
+  return{
+    vDF, vDR, vM, vG, allNum, symbolic: !allNum,
+    df_m, dr_m, L_m, massN, gN, W_num, Nf_num, Nr_num,
+    sDF, sDR, sL, sW, sNf, sNr, sNfTire, sNrTire,
+    zeroMass: isN(vM) && massN === 0,
+    zeroG: isN(vG) && Math.abs(gN) < 1e-9,
+    zeroDF: isN(vDF) && Math.abs(df_m) < 1e-9,
+    zeroDR: isN(vDR) && Math.abs(dr_m) < 1e-9,
+    zeroL: allNum && Math.abs(L_m) < 1e-9,
+    negDF: isN(vDF) && df_m < 0,
+    negDR: isN(vDR) && dr_m < 0
+  };
+}
+
+/* ══ RENDER & ANIMATION ══ */
 const canvas = document.getElementById('fbdCanvas');
 const ctx = canvas.getContext('2d');
-let currentData = null;
-
-function solve() {
-    const df = parseFloat(document.getElementById('inp_df').value);
-    const dr = parseFloat(document.getElementById('inp_dr').value);
-    const m = parseFloat(document.getElementById('inp_mass').value);
-    const g = parseFloat(document.getElementById('inp_g').value);
-
-    if (isNaN(df) || isNaN(dr) || isNaN(m) || isNaN(g)) return;
-
-    const L = (df + dr) / 1000;
-    const W = m * g;
-    const isImpossible = m < 0 || L < 0 || g < 0;
-
-    currentData = {
-        df_m: df/1000, dr_m: dr/1000, L, m, g, W,
-        Nf: L !== 0 ? (W * (dr/1000)) / L : 0,
-        Nr: L !== 0 ? (W * (df/1000)) / L : 0,
-        isImpossible,
-        reason: m < 0 ? "Mass cannot be negative." : L < 0 ? "Wheelbase cannot be negative." : g < 0 ? "Gravity magnitude must be positive." : ""
-    };
-
-    document.getElementById('resCard').style.display = 'block';
-    const banner = document.getElementById('caseBanner');
-    if(isImpossible) {
-        banner.className = "case-banner cb-rose";
-        banner.innerHTML = `<strong>Not Possible:</strong> ${currentData.reason}`;
-        banner.style.display = 'block';
-    } else {
-        banner.style.display = 'none';
-        document.getElementById('r_W').textContent = W.toFixed(1) + ' N';
-        document.getElementById('r_L').textContent = L.toFixed(3) + ' m';
-        document.getElementById('r_Nf').textContent = currentData.Nf.toFixed(1) + ' N';
-        document.getElementById('r_Nr').textContent = currentData.Nr.toFixed(1) + ' N';
-    }
-    animate();
-}
-
-function draw(t) {
-    const p = currentData;
-    ctx.clearRect(0,0,940,500);
-    
-    if(p.isImpossible) {
-        ctx.fillStyle = "#fb7185";
-        ctx.font = "bold 20px Space Grotesk";
-        ctx.textAlign = "center";
-        ctx.fillText("❌ PHYSICAL IMPOSSIBILITY DETECTED", 470, 250);
-        return;
-    }
-
-    const groundY = 350;
-    const scale = 220; 
-    const Ax = 470 - (p.L * scale / 2);
-    const Bx = 470 + (p.L * scale / 2);
-    const Gx = Ax + (p.df_m * scale);
-
-    // Ground line
-    ctx.strokeStyle = "#1e293b"; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(50, groundY); ctx.lineTo(890, groundY); ctx.stroke();
-
-    // Car Body
-    ctx.fillStyle = "#1e3a5f";
-    ctx.roundRect(Ax-60, groundY-110, (Bx-Ax)+120, 60, 15);
-    ctx.fill();
-
-    // Dimensions
-    const t1 = groundY + 45;
-    const t2 = groundY + 95;
-
-    ctx.setLineDash([5, 5]); ctx.lineWidth = 1; ctx.strokeStyle = "#a78bfa";
-    ctx.beginPath(); ctx.moveTo(Ax, groundY); ctx.lineTo(Ax, t1 + 10); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(Gx, groundY); ctx.lineTo(Gx, t1 + 10); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(Bx, groundY); ctx.lineTo(Bx, t1 + 10); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.beginPath(); ctx.moveTo(Ax, t1); ctx.lineTo(Gx, t1); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(Gx, t1); ctx.lineTo(Bx, t1); ctx.stroke();
-
-    ctx.fillStyle = "#a78bfa"; ctx.font = "bold 11px Space Mono"; ctx.textAlign="center";
-    ctx.fillText(`df: ${p.df_m.toFixed(3)}m`, (Ax+Gx)/2, t1 - 8);
-    ctx.fillText(`dr: ${p.dr_m.toFixed(3)}m`, (Gx+Bx)/2, t1 - 8);
-
-    // Forces with GLOW TIPS and CIRCLE NODES
-    const fLen = 100 * t;
-    drawForce(Gx, groundY-80, fLen, "down", "#fb7185", "W", p.W.toFixed(1)+'N');
-    drawForce(Ax, groundY, fLen, "up", "#34d399", "Nf", p.Nf.toFixed(1)+'N');
-    drawForce(Bx, groundY, fLen, "up", "#fbbf24", "Nr", p.Nr.toFixed(1)+'N');
-}
 
 function drawForce(x, y, len, dir, color, label, val) {
     const targetY = y + (dir === "up" ? -len : len);
     
-    // 1. Draw the Glowing Circle Node at the source
+    // Glowing Circle Node
     ctx.save();
     ctx.shadowBlur = 15;
     ctx.shadowColor = color;
@@ -193,11 +378,11 @@ function drawForce(x, y, len, dir, color, label, val) {
     ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI*2); ctx.fill();
     ctx.restore();
 
-    // 2. Draw Arrow Shaft
+    // Arrow Shaft
     ctx.strokeStyle = color; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, targetY); ctx.stroke();
 
-    // 3. Draw Arrow Head with Glow
+    // Arrow Head
     ctx.save();
     ctx.shadowBlur = 10;
     ctx.shadowColor = color;
@@ -213,26 +398,71 @@ function drawForce(x, y, len, dir, color, label, val) {
     ctx.fill();
     ctx.restore();
 
-    // 4. Labels
+    // Labels
     ctx.fillStyle = "white"; ctx.font = "bold 13px Space Mono"; ctx.textAlign = "left";
     ctx.fillText(label, x + 15, targetY + (dir==="up"?5:0));
     ctx.font = "10px Space Mono"; ctx.fillStyle = color;
     ctx.fillText(val, x + 15, targetY + (dir==="up"?18:13));
 }
 
-function animate() {
-    let start = null;
-    function step(ts) {
-        if(!start) start = ts;
-        let progress = Math.min((ts - start)/800, 1);
-        draw(progress);
-        if(progress < 1) requestAnimationFrame(step);
+function animateTab(p, tab, sw=false){
+  window._tab=tab;
+  const go=()=>{
+    let start=null;
+    const frame=(ts)=>{
+      if(!start)start=ts;
+      let t=Math.min((ts-start)/800,1);
+      
+      const Th=TH();
+      ctx.clearRect(0,0,940,540);
+      
+      const groundY = 380;
+      const scale = 240; 
+      const Ax = 470 - (p.L_m * scale / 2);
+      const Bx = 470 + (p.L_m * scale / 2);
+      const Gx = Ax + (p.df_m * scale);
+
+      // Simple ground
+      ctx.strokeStyle = Th.ground; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(50, groundY); ctx.lineTo(890, groundY); ctx.stroke();
+
+      // Basic Car Body
+      ctx.fillStyle = Th.carBody;
+      ctx.roundRect(Ax-60, groundY-110, (Bx-Ax)+120, 60, 15);
+      ctx.fill();
+
+      // Drawing Forces
+      const fLen = 100 * t;
+      if (tab === 'fbd') {
+        drawForce(Gx, groundY-80, fLen, "down", Th.weight, "W", (p.symbolic ? p.sW : p.W_num.toFixed(1)+'N'));
+        drawForce(Ax, groundY, fLen, "up", Th.Nf, "Nf", (p.symbolic ? p.sNf : p.Nf_num.toFixed(1)+'N'));
+        drawForce(Bx, groundY, fLen, "up", Th.Nr, "Nr", (p.symbolic ? p.sNr : p.Nr_num.toFixed(1)+'N'));
+      }
+      
+      if(t<1) requestAnimationFrame(frame);
     }
-    requestAnimationFrame(step);
+    requestAnimationFrame(frame);
+  }
+  if(sw){canvas.classList.add('switching');setTimeout(()=>{canvas.classList.remove('switching');go()},280)}
+  else go();
 }
 
-ctx.fillStyle = "#4a607e"; ctx.textAlign="center"; ctx.font="14px Space Grotesk";
-ctx.fillText("Ready to calculate", 470, 250);
+/* ══ INITIALIZATION ══ */
+function drawPlaceholder(){
+  const Th=TH(); ctx.clearRect(0,0,940,540);
+  ctx.fillStyle = Th.text; ctx.font = "700 20px Space Grotesk"; ctx.textAlign = "center";
+  ctx.fillText("⚡ Enter values and click Solve & Animate", 470, 250);
+}
+
+document.getElementById('solveBtn').addEventListener('click',()=>{
+  const p=compute();
+  if(!p) return;
+  window._P=p;
+  document.getElementById('resultCard').style.display = 'block';
+  animateTab(p, 'fbd', false);
+});
+
+drawPlaceholder();
 </script>
 </body>
 </html>
